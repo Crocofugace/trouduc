@@ -187,7 +187,11 @@ function checkRoundEnd(g) {
 }
 
 /* ================= BOTS v2 ================= */
-function botMove(g, p) {
+// [D10] niveaux de difficulté : easy = joue parfois un coup sous-optimal et brade sa carte
+// maîtresse trop tôt ; hard = ne se trompe jamais et garde sa carte maîtresse le plus longtemps possible.
+const SAVE_PASS_CHANCE = { easy: 0.15, normal: 0.55, hard: 0.85 };
+
+function botMove(g, p, level = "normal") {
   const legal = legalMoves(g, p);
   const plays = legal.filter(m => m.type === "play");
   if (plays.length === 0) return { type: "pass" };
@@ -204,8 +208,13 @@ function botMove(g, p) {
     return c;
   };
   plays.sort((a, b) => cost(a) - cost(b));
-  const best = plays[0];
-  if (g.phase === "PLI_REPONSE" && best.rank === strong && hand.length > 5 && Math.random() < 0.55) return { type: "pass" };
+  let best = plays[0];
+  if (level === "easy" && plays.length > 1 && Math.random() < 0.4) {
+    const pool = plays.slice(Math.ceil(plays.length / 2));
+    best = pool[Math.floor(Math.random() * pool.length)];
+  }
+  const savePassChance = SAVE_PASS_CHANCE[level] ?? SAVE_PASS_CHANCE.normal;
+  if (g.phase === "PLI_REPONSE" && best.rank === strong && hand.length > 5 && Math.random() < savePassChance) return { type: "pass" };
   return { type: "play", cards: best.cards };
 }
 

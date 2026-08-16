@@ -4,6 +4,7 @@ import {
   newGame, dealRound, applyExchanges, legalMoves, applyMove,
   botMove, SUITS, RANK_LABEL,
 } from "./engine/president.js";
+import { trackEvent } from "./analytics.js";
 
 /* ================= UI ================= */
 const C = {
@@ -184,6 +185,7 @@ export default function Trouduc() {
   const [selected, setSelected] = useState([]);
   const [numRounds, setNumRounds] = useState(5);
   const [numPlayers, setNumPlayers] = useState(4);
+  const [botLevel, setBotLevel] = useState("normal");
   const [announce, setAnnounce] = useState(null);
   const [revShow, setRevShow] = useState(false);
   const [fly, setFly] = useState(null);
@@ -192,6 +194,7 @@ export default function Trouduc() {
   const [soundOn, setSoundOn] = useState(true);
   const seenWinSeq = useRef(0);
   const ceremonyPlayed = useRef(0);
+  const gameFinishTracked = useRef(false);
   const rerender = useCallback(() => setTick(t => t + 1), []);
   const g = gRef.current;
 
@@ -235,8 +238,10 @@ export default function Trouduc() {
     dealRound(gRef.current);
     seenWinSeq.current = 0;
     ceremonyPlayed.current = 0;
+    gameFinishTracked.current = false;
     setSelected([]); setNote(""); setAnnounce(null); setFly(null); setRevShow(false);
     setScreen("play");
+    trackEvent("game_started", { players: numPlayers, rounds: numRounds, bots: botLevel });
     rerender();
   };
 
@@ -290,7 +295,7 @@ export default function Trouduc() {
     const t = setTimeout(() => {
       const p = g.turn;
       const revB = g.revolution;
-      const mv = botMove(g, p);
+      const mv = botMove(g, p, botLevel);
       applyMove(g, p, mv);
       sfx(mv.type === "pass" ? "pass" : "card");
       afterMove(revB);
@@ -304,6 +309,10 @@ export default function Trouduc() {
     ceremonyPlayed.current = g.round;
     sfx("fanfare");
     const t = setTimeout(() => sfx("wahwah"), 1300);
+    if (g.phase === "PARTIE_FINIE" && !gameFinishTracked.current) {
+      gameFinishTracked.current = true;
+      trackEvent("game_finished", { players: g.n, rounds: g.numRounds, bots: botLevel });
+    }
     return () => clearTimeout(t);
   }, [screen]); // eslint-disable-line
 
@@ -451,6 +460,17 @@ export default function Trouduc() {
             background: numRounds === n ? C.cyan : C.panel, color: numRounds === n ? C.ink : C.dim,
             boxShadow: "2.5px 2.5px 0 rgba(0,0,0,.6)", transform: `rotate(${n % 2 ? 1.5 : -1.5}deg)`,
           }}>{n}</button>
+        ))}
+      </div>
+      <div style={{ fontFamily: MARKER, fontSize: 14, color: C.dim, marginBottom: 8 }}>niveau des bots</div>
+      <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 26 }}>
+        {[["easy", "Facile"], ["normal", "Normal"], ["hard", "Difficile"]].map(([lvl, label]) => (
+          <button key={lvl} onClick={() => setBotLevel(lvl)} style={{
+            padding: "9px 18px", borderRadius: 6, fontFamily: MARKER, fontSize: 15, cursor: "pointer",
+            border: "3px solid #fff", outline: `2px solid ${C.ink}`,
+            background: botLevel === lvl ? C.cyan : C.panel, color: botLevel === lvl ? C.ink : C.dim,
+            boxShadow: "2.5px 2.5px 0 rgba(0,0,0,.6)", transform: `rotate(${lvl === "normal" ? 0 : lvl === "easy" ? -1.5 : 1.5}deg)`,
+          }}>{label}</button>
         ))}
       </div>
       {btn("ON DISTRIBUE !", startGame, { big: true, rot: -2 })}

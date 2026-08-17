@@ -5,177 +5,10 @@ import {
   botMove, SUITS, RANK_LABEL,
 } from "./engine/president.js";
 import { trackEvent } from "./analytics.js";
-
-/* ================= UI ================= */
-const C = {
-  wall: "#26262B", wall2: "#2C2C33", panel: "#303038", panelLine: "#4A4A55",
-  ink: "#1A1A1E", off: "#ECEFF1", dim: "rgba(236,239,241,.6)",
-  fluo: "#CCFF00", pink: "#FF3D8A", cyan: "#00E5FF", orange: "#FF8A00", violet: "#9B5CFF", mint: "#4DFF88",
-};
-const PLAYERS_META = [
-  { name: "TOI", tag: "T", color: C.fluo },
-  { name: "SKUB", tag: "S", color: C.cyan },
-  { name: "MOKA", tag: "M", color: C.pink },
-  { name: "VINZ", tag: "V", color: C.orange },
-  { name: "KAYA", tag: "K", color: C.violet },
-  { name: "ZBEUL", tag: "Z", color: C.mint },
-];
-const nameOf = p => PLAYERS_META[p].name;
-const SEATS = {
-  4: [[50, 90], [8, 52], [50, 10], [92, 52]],
-  5: [[50, 90], [8, 58], [24, 12], [76, 12], [92, 58]],
-  6: [[50, 90], [6, 58], [17, 14], [50, 7], [83, 14], [94, 58]],
-};
-const TURN_TIME = 15;
-const MARKER = "'Permanent Marker','Comic Sans MS',cursive";
-const SANS = "'Archivo','Segoe UI',sans-serif";
-
-function Sticker({ p, size = 40, dead = false }) {
-  const m = PLAYERS_META[p];
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: size * 0.22, background: m.color,
-      border: "3px solid #fff", outline: `2px solid ${C.ink}`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: MARKER, fontSize: size * 0.5, color: C.ink, flexShrink: 0,
-      transform: `rotate(${(p % 2 ? 1 : -1) * 4}deg)`, boxShadow: "3px 3px 0 rgba(0,0,0,.55)",
-      opacity: dead ? 0.5 : 1, filter: dead ? "grayscale(.7)" : "none",
-    }}>{m.tag}</div>
-  );
-}
-
-function Card({ card, small, selected, onClick, faded }) {
-  const redSuit = card.suit === 1 || card.suit === 2;
-  const tilt = ((card.id % 3) - 1) * 1.6; // légère pose "sticker", stable par carte
-  return (
-    <div onClick={faded ? undefined : onClick} style={{
-      width: small ? 32 : 46, height: small ? 44 : 64, borderRadius: small ? 8 : 10, background: "#fff",
-      color: redSuit ? C.pink : C.ink,
-      border: "3px solid #fff", outline: `2px solid ${C.ink}`,
-      boxShadow: selected ? `0 0 0 3px ${C.fluo}, 3px 3px 0 rgba(0,0,0,.6)` : "3px 3px 0 rgba(0,0,0,.6)",
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      fontFamily: MARKER, fontSize: small ? 14 : 20, cursor: onClick && !faded ? "pointer" : "default",
-      transform: selected ? "translateY(-10px) rotate(0deg)" : `rotate(${tilt}deg)`,
-      transition: "transform .12s, opacity .15s",
-      opacity: faded ? 0.3 : 1, flexShrink: 0, userSelect: "none",
-    }}>
-      <div style={{ lineHeight: 1 }}>{RANK_LABEL(card.rank)}</div>
-      <div style={{ fontSize: small ? 12 : 16, lineHeight: 1.1 }}>{SUITS[card.suit]}</div>
-    </div>
-  );
-}
-
-function Tag({ text, color = C.fluo, bg = null, rotate = -4, size = 20 }) {
-  return (
-    <span style={{
-      display: "inline-block", fontFamily: MARKER, fontSize: size, color: bg ? C.ink : color,
-      background: bg || "transparent", padding: bg ? "3px 12px" : 0, borderRadius: bg ? 4 : 0,
-      transform: `rotate(${rotate}deg)`, boxShadow: bg ? "3px 3px 0 rgba(0,0,0,.55)" : "none",
-      textShadow: bg ? "none" : `2px 2px 0 ${C.ink}`,
-    }}>{text}</span>
-  );
-}
-
-function HierarchyStrip({ rev }) {
-  const ranks = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-  const order = rev ? ranks.slice().reverse() : ranks;
-  return (
-    <div style={{ display: "flex", gap: 3, justifyContent: "center", flexWrap: "wrap", fontFamily: SANS, fontSize: 11, color: C.dim, fontWeight: 700 }}>
-      {order.map((r, i) => (
-        <span key={r} style={{ color: i === order.length - 1 ? C.fluo : C.dim }}>
-          {RANK_LABEL(r)}{i < order.length - 1 ? " ‹" : ""}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/* ================= AUDIO (Tone.js — ambiance street lo-fi) ================= */
-function createAudio() {
-  const master = new Tone.Volume(-6).toDestination();
-  const spray = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.06, sustain: 0 } })
-    .connect(new Tone.Volume(-14).connect(master));
-  const spraySlow = new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.02, decay: 0.45, sustain: 0 } })
-    .connect(new Tone.Volume(-12).connect(master));
-  const thud = new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 1, envelope: { attack: 0.001, decay: 0.12, sustain: 0 } })
-    .connect(new Tone.Volume(-11).connect(master));
-  const slap = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.08, sustain: 0 } })
-    .connect(new Tone.Volume(-9).connect(master));
-  const horn = new Tone.Synth({ oscillator: { type: "sawtooth" }, portamento: 0.06, envelope: { attack: 0.02, decay: 0.05, sustain: 0.85, release: 0.15 } })
-    .connect(new Tone.Volume(-13).connect(master));
-  const stab = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sawtooth" }, envelope: { attack: 0.03, decay: 0.2, sustain: 0.4, release: 0.3 } })
-    .connect(new Tone.Volume(-14).connect(master));
-  const sad = new Tone.Synth({ oscillator: { type: "sawtooth" }, portamento: 0.22, envelope: { attack: 0.05, decay: 0.1, sustain: 0.7, release: 0.4 } })
-    .connect(new Tone.Volume(-12).connect(master));
-
-  // musique : groove boom-bap 2 mesures (batterie, basse, accords mineurs, motif sombre)
-  const bassS = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.005, decay: 0.25, sustain: 0.3, release: 0.18 } })
-    .connect(new Tone.Volume(-19).connect(master));
-  const keys = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.6, sustain: 0.06, release: 0.6 } })
-    .connect(new Tone.Volume(-23).connect(master));
-  const hook = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.003, decay: 0.3, sustain: 0.02, release: 0.3 } })
-    .connect(new Tone.Volume(-25).connect(master));
-  const kick = new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 5, envelope: { attack: 0.001, decay: 0.3, sustain: 0 } })
-    .connect(new Tone.Volume(-14).connect(master));
-  const snare = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.13, sustain: 0 } })
-    .connect(new Tone.Volume(-19).connect(master));
-  const hat = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 } })
-    .connect(new Tone.Volume(-29).connect(master));
-  const K = "k", S = "s";
-  const drums = [
-    K, 0, 0, 0, S, 0, 0, K, 0, 0, K, 0, S, 0, 0, 0,
-    K, 0, 0, K, S, 0, 0, 0, K, 0, K, 0, S, 0, 0, S,
-  ];
-  const hats = [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1];
-  const bassline = [
-    "A1", 0, 0, "A1", 0, 0, "C2", 0, "A1", 0, 0, 0, "G1", 0, "E1", 0,
-    "F1", 0, 0, "F1", 0, 0, "A1", 0, "E1", 0, 0, "E1", 0, "G1", 0, 0,
-  ];
-  const chords = [
-    ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0, 0, 0, 0, 0, ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0,
-    ["F2", "A2", "C3", "E3"], 0, 0, 0, 0, 0, 0, 0, ["E2", "G#2", "B2", "D3"], 0, 0, 0, 0, 0, 0, 0,
-  ];
-  const hookline = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "E4", 0, "C4", 0,
-    "A3", 0, 0, "B3", "C4", 0, 0, 0, 0, 0, 0, 0, "G3", 0, 0, 0,
-  ];
-  const seqD = new Tone.Sequence((t, d) => {
-    if (d === K) kick.triggerAttackRelease("C1", "8n", t);
-    else if (d === S) snare.triggerAttackRelease("16n", t);
-  }, drums, "16n");
-  const seqH = new Tone.Sequence((t, h) => { if (h) hat.triggerAttackRelease("32n", t); }, hats, "16n");
-  const seqB = new Tone.Sequence((t, n) => { if (n) bassS.triggerAttackRelease(n, "8n", t); }, bassline, "16n");
-  const seqC = new Tone.Sequence((t, ch) => { if (ch) keys.triggerAttackRelease(ch, "2n", t); }, chords, "16n");
-  const seqK = new Tone.Sequence((t, n) => { if (n) hook.triggerAttackRelease(n, "8n", t); }, hookline, "16n");
-  Tone.Transport.bpm.value = 88;
-  Tone.Transport.swing = 0.22;
-  Tone.Transport.swingSubdivision = "16n";
-
-  return {
-    card: () => spray.triggerAttackRelease("16n"),
-    pass: () => thud.triggerAttackRelease("G2", "16n"),
-    trick: () => { slap.triggerAttackRelease("C3", "16n"); spray.triggerAttackRelease("16n", Tone.now() + 0.05); },
-    revolution: () => {
-      const now = Tone.now();
-      spraySlow.triggerAttackRelease("2n", now);
-      stab.triggerAttackRelease(["D3", "G#3", "D4"], "4n", now + 0.15);
-    },
-    fanfare: () => { // air horn du boss
-      const now = Tone.now();
-      horn.triggerAttackRelease("C4", "8n", now);
-      horn.triggerAttackRelease("G4", "8n", now + 0.28);
-      horn.triggerAttackRelease("C4", "16n", now + 0.56);
-      horn.triggerAttackRelease("G4", "2n", now + 0.68);
-    },
-    wahwah: () => {
-      const now = Tone.now();
-      ["A3", "G3", "F#3"].forEach((n, i) => sad.triggerAttackRelease(n, "4n", now + i * 0.35));
-      sad.triggerAttackRelease("C3", "2n", now + 1.05);
-    },
-    musicStart: () => { seqD.start(0); seqH.start(0); seqB.start(0); seqC.start(0); seqK.start(0); Tone.Transport.start(); },
-    musicStop: () => { Tone.Transport.stop(); seqD.stop(); seqH.stop(); seqB.stop(); seqC.stop(); seqK.stop(); },
-  };
-}
+import {
+  C, MARKER, SANS, PLAYERS_META, nameOf, SEATS, TURN_TIME,
+  Sticker, Card, Tag, HierarchyStrip, Btn, Shell, createAudio,
+} from "./ui/shared.jsx";
 
 export default function Trouduc() {
   const gRef = useRef(null);
@@ -387,43 +220,9 @@ export default function Trouduc() {
     afterMove(revB);
   };
 
-  const btn = (label, onClick, opts = {}) => (
-    <button onClick={onClick} disabled={opts.disabled} style={{
-      padding: opts.big ? "13px 38px" : "11px 26px", borderRadius: 6, border: "3px solid #fff",
-      outline: `2px solid ${C.ink}`, fontFamily: MARKER, fontSize: opts.big ? 19 : 16,
-      cursor: opts.disabled ? "default" : "pointer",
-      background: opts.disabled ? "#3A3A42" : opts.alt ? C.off : C.fluo,
-      color: opts.disabled ? C.dim : C.ink,
-      boxShadow: opts.disabled ? "none" : "3px 3px 0 rgba(0,0,0,.6)",
-      transform: `rotate(${opts.rot ?? 0}deg)`,
-    }}>{label}</button>
-  );
-
-  const shell = children => (
-    <div style={{
-      minHeight: "100vh", position: "relative", background: C.wall,
-      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='96'%3E%3Cpath d='M0 1h160M0 49h160M0 95h160' stroke='%23ffffff10' stroke-width='2'/%3E%3Cpath d='M0 0v48M80 0v48M160 0v48M40 48v48M120 48v48' stroke='%23ffffff0d' stroke-width='2'/%3E%3C/svg%3E")`,
-      color: C.off, fontFamily: SANS,
-      display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 8px 24px",
-    }}>
-      <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Archivo:wght@500;600;700&display=swap" rel="stylesheet" />
-      <style>{`
-        @keyframes pulseFluo { 0%,100%{ box-shadow:0 0 0 0 rgba(204,255,0,.6);} 50%{ box-shadow:0 0 0 8px rgba(204,255,0,0);} }
-        @keyframes slapIn { 0%{ transform:scale(2.2) rotate(-14deg); opacity:0;} 65%{ transform:scale(.94) rotate(-5deg); opacity:1;} 100%{ transform:scale(1) rotate(-6deg);} }
-        @keyframes shake { 0%,100%{ transform:translate(-50%,-50%);} 25%{ transform:translate(calc(-50% - 3px),-50%);} 75%{ transform:translate(calc(-50% + 3px),-50%);} }
-        @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-      `}</style>
-      <button onClick={toggleSound} title="Musique et sons" style={{
-        position: "absolute", top: 10, right: 10, zIndex: 40, width: 40, height: 40, borderRadius: 8,
-        border: "2px solid #fff", outline: `2px solid ${C.ink}`, background: C.panel, color: C.off,
-        fontSize: 16, cursor: "pointer", transform: "rotate(3deg)", boxShadow: "2px 2px 0 rgba(0,0,0,.6)",
-      }}>{soundOn ? "🔊" : "🔇"}</button>
-      {children}
-    </div>
-  );
-
   /* ---- MENU ---- */
-  if (screen === "menu") return shell(
+  if (screen === "menu") return (
+    <Shell soundOn={soundOn} onToggleSound={toggleSound}>
     <div style={{ maxWidth: 430, width: "100%", textAlign: "center", marginTop: 30 }}>
       <div style={{ fontFamily: MARKER, fontSize: 52, color: C.fluo, transform: "rotate(-3deg)", lineHeight: 1, textShadow: `3px 3px 0 ${C.ink}` }}>
         TROUDUC
@@ -473,7 +272,7 @@ export default function Trouduc() {
           }}>{label}</button>
         ))}
       </div>
-      {btn("ON DISTRIBUE !", startGame, { big: true, rot: -2 })}
+      <Btn label="ON DISTRIBUE !" onClick={startGame} big rot={-2} />
       <div style={{
         marginTop: 28, fontSize: 12.5, color: C.dim, lineHeight: 1.65, textAlign: "left",
         background: C.panel, border: `2px solid ${C.panelLine}`, borderRadius: 8, padding: "12px 14px",
@@ -484,6 +283,7 @@ export default function Trouduc() {
         suivantes · échanges 2 cartes (Boss↔Trouduc) et 1 carte (Vice↔Vice) · {TURN_TIME} s par tour.
       </div>
     </div>
+    </Shell>
   );
 
   if (!g) return null;
@@ -493,7 +293,8 @@ export default function Trouduc() {
   if (screen === "exchange") {
     const role = humanExchangeRole();
     const need = role === "P" ? 2 : 1;
-    return shell(
+    return (
+      <Shell soundOn={soundOn} onToggleSound={toggleSound}>
       <div style={{ maxWidth: 460, width: "100%", textAlign: "center", marginTop: 24 }}>
         <div style={{ display: "flex", justifyContent: "center" }}><Sticker p={0} size={54} /></div>
         <div style={{ fontFamily: MARKER, fontSize: 24, color: C.fluo, transform: "rotate(-2deg)", margin: "10px 0 4px" }}>
@@ -509,8 +310,9 @@ export default function Trouduc() {
             <Card key={c.id} card={c} selected={selected.includes(c.id)} onClick={() => toggleCard(c.id)} />
           ))}
         </div>
-        {btn(need === 2 ? "Lâcher ces 2 cartes" : "Lâcher cette carte", confirmExchange, { disabled: selected.length !== need })}
+        <Btn label={need === 2 ? "Lâcher ces 2 cartes" : "Lâcher cette carte"} onClick={confirmExchange} disabled={selected.length !== need} />
       </div>
+      </Shell>
     );
   }
 
@@ -518,7 +320,8 @@ export default function Trouduc() {
   if (screen === "roundEnd") {
     const order = Array.from({ length: g.n }, (_, p) => p).sort((a, b) => g.titles[a] - g.titles[b]);
     const label = (t) => t === 0 ? "LE BOSS" : t === 1 ? "VICE-BOSS" : t === g.n - 1 ? "TROUDUC" : t === g.n - 2 ? "VICE-TROUDUC" : "DANS LE VENT";
-    return shell(
+    return (
+      <Shell soundOn={soundOn} onToggleSound={toggleSound}>
       <div style={{ maxWidth: 450, width: "100%", textAlign: "center", marginTop: 22 }}>
         <div style={{ fontFamily: MARKER, fontSize: 15, color: C.dim }}>manche {g.round}/{g.numRounds}</div>
         <div style={{ height: 16 }} />
@@ -563,19 +366,21 @@ export default function Trouduc() {
             {g.offenders.map(nameOf).join(", ")} a fini sur un 2 : Trouduc direct !
           </div>
         )}
-        <div style={{ marginTop: 12 }}>{btn("Le mur des scores →", () => setScreen("standings"), { rot: 1 })}</div>
+        <div style={{ marginTop: 12 }}><Btn label="Le mur des scores →" onClick={() => setScreen("standings")} rot={1} /></div>
       </div>
+      </Shell>
     );
   }
 
   if (screen === "standings") {
-    return <Standings g={g} onNext={g.phase === "PARTIE_FINIE" ? () => setScreen("menu") : nextRound} shell={shell} btn={btn} />;
+    return <Standings g={g} onNext={g.phase === "PARTIE_FINIE" ? () => setScreen("menu") : nextRound} soundOn={soundOn} onToggleSound={toggleSound} />;
   }
 
   /* ---- TABLE DE JEU ---- */
   const lastPlay = g.trick ? g.trick.pile[g.trick.pile.length - 1] : null;
   const playableRanks = new Set(humanPlays.map(m => m.rank));
-  return shell(
+  return (
+    <Shell soundOn={soundOn} onToggleSound={toggleSound}>
     <div style={{ maxWidth: 500, width: "100%", display: "flex", flexDirection: "column", flex: 1 }}>
       {revShow && (
         <div style={{
@@ -692,8 +497,8 @@ export default function Trouduc() {
       </div>
 
       <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 10 }}>
-        {btn("JOUER", playSelection, { disabled: !canPlay, rot: -1 })}
-        {btn("PASSER", pass, { disabled: !canPass, alt: true, rot: 1 })}
+        <Btn label="JOUER" onClick={playSelection} disabled={!canPlay} rot={-1} />
+        <Btn label="PASSER" onClick={pass} disabled={!canPass} alt rot={1} />
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center" }}>
@@ -711,11 +516,12 @@ export default function Trouduc() {
         Manche {g.round}/{g.numRounds} · {g.n} joueurs
       </div>
     </div>
+    </Shell>
   );
 }
 
 /* Le mur des scores : stickers claqués sur le béton, lignes animées */
-function Standings({ g, onNext, shell, btn }) {
+function Standings({ g, onNext, soundOn, onToggleSound }) {
   const [moved, setMoved] = useState(false);
   useEffect(() => { const t = setTimeout(() => setMoved(true), 500); return () => clearTimeout(t); }, []);
   const players = Array.from({ length: g.n }, (_, p) => p);
@@ -724,7 +530,8 @@ function Standings({ g, onNext, shell, btn }) {
   const newOrder = byScore(g.scores);
   const rowH = 60;
   const finished = g.phase === "PARTIE_FINIE";
-  return shell(
+  return (
+    <Shell soundOn={soundOn} onToggleSound={onToggleSound}>
     <div style={{ maxWidth: 440, width: "100%", textAlign: "center", marginTop: 24 }}>
       <div style={{ fontFamily: "'Permanent Marker',cursive", fontSize: 26, color: "#ECEFF1", transform: "rotate(-2deg)", textShadow: "3px 3px 0 #1A1A1E" }}>
         {finished ? "LE MUR FINAL" : "LE MUR DES SCORES"} <span style={{ color: "#FF3D8A" }}>↓</span>
@@ -765,7 +572,8 @@ function Standings({ g, onNext, shell, btn }) {
           );
         })}
       </div>
-      {btn(finished ? "On remet ça !" : "Manche suivante", onNext, { big: true, rot: -1 })}
+      <Btn label={finished ? "On remet ça !" : "Manche suivante"} onClick={onNext} big rot={-1} />
     </div>
+    </Shell>
   );
 }

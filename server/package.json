@@ -1,0 +1,19 @@
+{
+  "name": "trouduc-server",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Trouduc — backend multijoueur (Express + Socket.io), moteur réutilisé depuis src/engine/president.js",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

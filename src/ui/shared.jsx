@@ -126,9 +126,14 @@ export function Shell({ soundOn, onToggleSound, children }) {
   );
 }
 
-/* ================= AUDIO (Tone.js — ambiance street lo-fi) ================= */
+/* ================= AUDIO (Tone.js — identité sonore street lo-fi) ================= */
 export function createAudio() {
   const master = new Tone.Volume(-6).toDestination();
+  // Bus d'ambiance lo-fi : léger crépitement vinyle en continu + reverb sur les éléments mélodiques.
+  const atmoBus = new Tone.Freeverb({ roomSize: 0.6, dampening: 3000 }).connect(master);
+  const vinylFilter = new Tone.Filter(2800, "bandpass").connect(new Tone.Volume(-36).connect(master));
+  const vinyl = new Tone.Noise({ type: "pink" }).connect(vinylFilter);
+
   const spray = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.06, sustain: 0 } })
     .connect(new Tone.Volume(-14).connect(master));
   const spraySlow = new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.02, decay: 0.45, sustain: 0 } })
@@ -137,47 +142,67 @@ export function createAudio() {
     .connect(new Tone.Volume(-11).connect(master));
   const slap = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.08, sustain: 0 } })
     .connect(new Tone.Volume(-9).connect(master));
+  const click = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 } })
+    .connect(new Tone.Volume(-24).connect(master));
   const horn = new Tone.Synth({ oscillator: { type: "sawtooth" }, portamento: 0.06, envelope: { attack: 0.02, decay: 0.05, sustain: 0.85, release: 0.15 } })
     .connect(new Tone.Volume(-13).connect(master));
   const stab = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sawtooth" }, envelope: { attack: 0.03, decay: 0.2, sustain: 0.4, release: 0.3 } })
     .connect(new Tone.Volume(-14).connect(master));
   const sad = new Tone.Synth({ oscillator: { type: "sawtooth" }, portamento: 0.22, envelope: { attack: 0.05, decay: 0.1, sustain: 0.7, release: 0.4 } })
     .connect(new Tone.Volume(-12).connect(master));
+  // Coup de scratch vinyle (bruit filtré + pitch-bend descendant) déclenché juste avant le "wahwah" du Trou du Cul.
+  const scratchNoise = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.18, sustain: 0 } });
+  const scratchFilter = new Tone.Filter(1200, "bandpass").connect(new Tone.Volume(-16).connect(master));
+  scratchNoise.connect(scratchFilter);
 
-  // musique : groove boom-bap 2 mesures (batterie, basse, accords mineurs, motif sombre)
+  // musique : groove boom-bap 4 mesures (batterie, basse, accords mineurs, motif call-and-response)
   const bassS = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.005, decay: 0.25, sustain: 0.3, release: 0.18 } })
     .connect(new Tone.Volume(-19).connect(master));
   const keys = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.6, sustain: 0.06, release: 0.6 } })
-    .connect(new Tone.Volume(-23).connect(master));
+    .connect(new Tone.Volume(-23).connect(atmoBus));
   const hook = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.003, decay: 0.3, sustain: 0.02, release: 0.3 } })
-    .connect(new Tone.Volume(-25).connect(master));
+    .connect(new Tone.Volume(-25).connect(atmoBus));
   const kick = new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 5, envelope: { attack: 0.001, decay: 0.3, sustain: 0 } })
     .connect(new Tone.Volume(-14).connect(master));
   const snare = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.13, sustain: 0 } })
     .connect(new Tone.Volume(-19).connect(master));
   const hat = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 } })
     .connect(new Tone.Volume(-29).connect(master));
-  const K = "k", S = "s";
+  const K = "k", S = "s", F = "f"; // F = coup de caisse claire de fill (même son que S, motif différent)
+  // Mesures 1-2 : groove principal. Mesures 3-4 : reprise + petite variation (accord ii au lieu du IV, fill final).
   const drums = [
     K, 0, 0, 0, S, 0, 0, K, 0, 0, K, 0, S, 0, 0, 0,
     K, 0, 0, K, S, 0, 0, 0, K, 0, K, 0, S, 0, 0, S,
+    K, 0, 0, 0, S, 0, 0, K, 0, 0, K, 0, S, 0, 0, 0,
+    K, 0, 0, K, S, 0, 0, 0, K, 0, S, 0, F, S, F, S,
   ];
-  const hats = [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1];
+  const hats = [
+    1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0,
+    1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1,
+    1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0,
+    1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+  ];
   const bassline = [
     "A1", 0, 0, "A1", 0, 0, "C2", 0, "A1", 0, 0, 0, "G1", 0, "E1", 0,
     "F1", 0, 0, "F1", 0, 0, "A1", 0, "E1", 0, 0, "E1", 0, "G1", 0, 0,
+    "A1", 0, 0, "A1", 0, 0, "C2", 0, "A1", 0, 0, 0, "G1", 0, "E1", 0,
+    "D1", 0, 0, "D1", 0, 0, "F1", 0, "E1", 0, 0, "E1", 0, "G1", 0, 0,
   ];
   const chords = [
     ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0, 0, 0, 0, 0, ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0,
     ["F2", "A2", "C3", "E3"], 0, 0, 0, 0, 0, 0, 0, ["E2", "G#2", "B2", "D3"], 0, 0, 0, 0, 0, 0, 0,
+    ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0, 0, 0, 0, 0, ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0,
+    ["D2", "F2", "A2", "C3"], 0, 0, 0, 0, 0, 0, 0, ["E2", "G#2", "B2", "D3"], 0, 0, 0, 0, 0, 0, 0,
   ];
   const hookline = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "E4", 0, "C4", 0,
     "A3", 0, 0, "B3", "C4", 0, 0, 0, 0, 0, 0, 0, "G3", 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "G4", 0, "E4", 0,
+    "C4", 0, 0, "B3", "A3", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ];
   const seqD = new Tone.Sequence((t, d) => {
     if (d === K) kick.triggerAttackRelease("C1", "8n", t);
-    else if (d === S) snare.triggerAttackRelease("16n", t);
+    else if (d === S || d === F) snare.triggerAttackRelease("16n", t);
   }, drums, "16n");
   const seqH = new Tone.Sequence((t, h) => { if (h) hat.triggerAttackRelease("32n", t); }, hats, "16n");
   const seqB = new Tone.Sequence((t, n) => { if (n) bassS.triggerAttackRelease(n, "8n", t); }, bassline, "16n");
@@ -189,6 +214,7 @@ export function createAudio() {
 
   return {
     card: () => spray.triggerAttackRelease("16n"),
+    select: () => click.triggerAttackRelease("A5", "32n"),
     pass: () => thud.triggerAttackRelease("G2", "16n"),
     trick: () => { slap.triggerAttackRelease("C3", "16n"); spray.triggerAttackRelease("16n", Tone.now() + 0.05); },
     revolution: () => {
@@ -203,12 +229,22 @@ export function createAudio() {
       horn.triggerAttackRelease("C4", "16n", now + 0.56);
       horn.triggerAttackRelease("G4", "2n", now + 0.68);
     },
-    wahwah: () => {
+    wahwah: () => { // scratch d'arrêt façon platine + motif descendant désolé
       const now = Tone.now();
-      ["A3", "G3", "F#3"].forEach((n, i) => sad.triggerAttackRelease(n, "4n", now + i * 0.35));
-      sad.triggerAttackRelease("C3", "2n", now + 1.05);
+      scratchFilter.frequency.setValueAtTime(2200, now);
+      scratchFilter.frequency.exponentialRampToValueAtTime(300, now + 0.18);
+      scratchNoise.triggerAttackRelease("8n", now);
+      ["A3", "G3", "F#3"].forEach((n, i) => sad.triggerAttackRelease(n, "4n", now + 0.25 + i * 0.35));
+      sad.triggerAttackRelease("C3", "2n", now + 1.3);
     },
-    musicStart: () => { seqD.start(0); seqH.start(0); seqB.start(0); seqC.start(0); seqK.start(0); Tone.Transport.start(); },
-    musicStop: () => { Tone.Transport.stop(); seqD.stop(); seqH.stop(); seqB.stop(); seqC.stop(); seqK.stop(); },
+    musicStart: () => {
+      seqD.start(0); seqH.start(0); seqB.start(0); seqC.start(0); seqK.start(0);
+      vinyl.start(0);
+      Tone.Transport.start();
+    },
+    musicStop: () => {
+      Tone.Transport.stop(); seqD.stop(); seqH.stop(); seqB.stop(); seqC.stop(); seqK.stop();
+      vinyl.stop();
+    },
   };
 }

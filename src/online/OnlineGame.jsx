@@ -110,6 +110,7 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
 
   const toggleCard = id => {
     ensureAudio();
+    sfx("select");
     const card = state.myHand.find(c => c.id === id);
     setSelected(sel => {
       if (sel.includes(id)) return sel.filter(x => x !== id);

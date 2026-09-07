@@ -190,6 +190,7 @@ export default function Trouduc() {
     (!g?.mustIncludeThreeClubs || selCards.some(c => c.rank === 3 && c.suit === 0));
 
   const toggleCard = id => {
+    sfx("select");
     const card = g.hands[0].find(c => c.id === id);
     setSelected(sel => {
       if (sel.includes(id)) return sel.filter(x => x !== id);

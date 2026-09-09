@@ -129,10 +129,10 @@ export function Shell({ soundOn, onToggleSound, children }) {
 /* ================= AUDIO (Tone.js — identité sonore street lo-fi) ================= */
 export function createAudio() {
   const master = new Tone.Volume(-6).toDestination();
-  // Bus d'ambiance lo-fi : léger crépitement vinyle en continu + reverb sur les éléments mélodiques.
+  // Bus d'ambiance lo-fi : vrai échantillon de crépitement vinyle en boucle + reverb sur les éléments mélodiques.
   const atmoBus = new Tone.Freeverb({ roomSize: 0.6, dampening: 3000 }).connect(master);
-  const vinylFilter = new Tone.Filter(2800, "bandpass").connect(new Tone.Volume(-36).connect(master));
-  const vinyl = new Tone.Noise({ type: "pink" }).connect(vinylFilter);
+  const vinyl = new Tone.Player({ url: "/audio/vinyl-crackle.mp3", loop: true, autostart: false })
+    .connect(new Tone.Volume(-22).connect(master));
 
   const spray = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.06, sustain: 0 } })
     .connect(new Tone.Volume(-14).connect(master));
@@ -239,12 +239,15 @@ export function createAudio() {
     },
     musicStart: () => {
       seqD.start(0); seqH.start(0); seqB.start(0); seqC.start(0); seqK.start(0);
-      vinyl.start(0);
+      // Le fichier vinyle se charge en arrière-plan : on le lance dès qu'il est prêt.
+      if (vinyl.loaded) { try { vinyl.start(0); } catch (e) { } }
+      else vinyl.autostart = true;
       Tone.Transport.start();
     },
     musicStop: () => {
       Tone.Transport.stop(); seqD.stop(); seqH.stop(); seqB.stop(); seqC.stop(); seqK.stop();
-      vinyl.stop();
+      vinyl.autostart = false;
+      if (vinyl.loaded) { try { vinyl.stop(); } catch (e) { } }
     },
   };
 }

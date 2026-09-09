@@ -126,13 +126,15 @@ export function Shell({ soundOn, onToggleSound, children }) {
   );
 }
 
-/* ================= AUDIO (Tone.js — identité sonore street lo-fi) ================= */
+/* ================= AUDIO (musique réelle + bruitages Tone.js) ================= */
 export function createAudio() {
   const master = new Tone.Volume(-6).toDestination();
-  // Bus d'ambiance lo-fi : vrai échantillon de crépitement vinyle en boucle + reverb sur les éléments mélodiques.
-  const atmoBus = new Tone.Freeverb({ roomSize: 0.6, dampening: 3000 }).connect(master);
-  const vinyl = new Tone.Player({ url: "/audio/vinyl-crackle.mp3", loop: true, autostart: false })
-    .connect(new Tone.Volume(-22).connect(master));
+  // Musique de fond : lecture directe du morceau fourni, en boucle (lecteur HTML natif, plus fiable
+  // qu'un Tone.Player pour un simple fond audio — pas besoin de synchronisation avec le Transport).
+  const music = new Audio("/audio/theme.mp3");
+  music.loop = true;
+  music.volume = 0.55;
+  music.preload = "auto";
 
   const spray = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.06, sustain: 0 } })
     .connect(new Tone.Volume(-14).connect(master));
@@ -154,63 +156,6 @@ export function createAudio() {
   const scratchNoise = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.18, sustain: 0 } });
   const scratchFilter = new Tone.Filter(1200, "bandpass").connect(new Tone.Volume(-16).connect(master));
   scratchNoise.connect(scratchFilter);
-
-  // musique : groove boom-bap 4 mesures (batterie, basse, accords mineurs, motif call-and-response)
-  const bassS = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.005, decay: 0.25, sustain: 0.3, release: 0.18 } })
-    .connect(new Tone.Volume(-19).connect(master));
-  const keys = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.6, sustain: 0.06, release: 0.6 } })
-    .connect(new Tone.Volume(-23).connect(atmoBus));
-  const hook = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.003, decay: 0.3, sustain: 0.02, release: 0.3 } })
-    .connect(new Tone.Volume(-25).connect(atmoBus));
-  const kick = new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 5, envelope: { attack: 0.001, decay: 0.3, sustain: 0 } })
-    .connect(new Tone.Volume(-14).connect(master));
-  const snare = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.13, sustain: 0 } })
-    .connect(new Tone.Volume(-19).connect(master));
-  const hat = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 } })
-    .connect(new Tone.Volume(-29).connect(master));
-  const K = "k", S = "s", F = "f"; // F = coup de caisse claire de fill (même son que S, motif différent)
-  // Mesures 1-2 : groove principal. Mesures 3-4 : reprise + petite variation (accord ii au lieu du IV, fill final).
-  const drums = [
-    K, 0, 0, 0, S, 0, 0, K, 0, 0, K, 0, S, 0, 0, 0,
-    K, 0, 0, K, S, 0, 0, 0, K, 0, K, 0, S, 0, 0, S,
-    K, 0, 0, 0, S, 0, 0, K, 0, 0, K, 0, S, 0, 0, 0,
-    K, 0, 0, K, S, 0, 0, 0, K, 0, S, 0, F, S, F, S,
-  ];
-  const hats = [
-    1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0,
-    1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1,
-    1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0,
-    1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
-  ];
-  const bassline = [
-    "A1", 0, 0, "A1", 0, 0, "C2", 0, "A1", 0, 0, 0, "G1", 0, "E1", 0,
-    "F1", 0, 0, "F1", 0, 0, "A1", 0, "E1", 0, 0, "E1", 0, "G1", 0, 0,
-    "A1", 0, 0, "A1", 0, 0, "C2", 0, "A1", 0, 0, 0, "G1", 0, "E1", 0,
-    "D1", 0, 0, "D1", 0, 0, "F1", 0, "E1", 0, 0, "E1", 0, "G1", 0, 0,
-  ];
-  const chords = [
-    ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0, 0, 0, 0, 0, ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0,
-    ["F2", "A2", "C3", "E3"], 0, 0, 0, 0, 0, 0, 0, ["E2", "G#2", "B2", "D3"], 0, 0, 0, 0, 0, 0, 0,
-    ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0, 0, 0, 0, 0, ["A2", "C3", "E3", "G3"], 0, 0, 0, 0, 0,
-    ["D2", "F2", "A2", "C3"], 0, 0, 0, 0, 0, 0, 0, ["E2", "G#2", "B2", "D3"], 0, 0, 0, 0, 0, 0, 0,
-  ];
-  const hookline = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "E4", 0, "C4", 0,
-    "A3", 0, 0, "B3", "C4", 0, 0, 0, 0, 0, 0, 0, "G3", 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "G4", 0, "E4", 0,
-    "C4", 0, 0, "B3", "A3", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  ];
-  const seqD = new Tone.Sequence((t, d) => {
-    if (d === K) kick.triggerAttackRelease("C1", "8n", t);
-    else if (d === S || d === F) snare.triggerAttackRelease("16n", t);
-  }, drums, "16n");
-  const seqH = new Tone.Sequence((t, h) => { if (h) hat.triggerAttackRelease("32n", t); }, hats, "16n");
-  const seqB = new Tone.Sequence((t, n) => { if (n) bassS.triggerAttackRelease(n, "8n", t); }, bassline, "16n");
-  const seqC = new Tone.Sequence((t, ch) => { if (ch) keys.triggerAttackRelease(ch, "2n", t); }, chords, "16n");
-  const seqK = new Tone.Sequence((t, n) => { if (n) hook.triggerAttackRelease(n, "8n", t); }, hookline, "16n");
-  Tone.Transport.bpm.value = 88;
-  Tone.Transport.swing = 0.22;
-  Tone.Transport.swingSubdivision = "16n";
 
   return {
     card: () => spray.triggerAttackRelease("16n"),
@@ -237,17 +182,7 @@ export function createAudio() {
       ["A3", "G3", "F#3"].forEach((n, i) => sad.triggerAttackRelease(n, "4n", now + 0.25 + i * 0.35));
       sad.triggerAttackRelease("C3", "2n", now + 1.3);
     },
-    musicStart: () => {
-      seqD.start(0); seqH.start(0); seqB.start(0); seqC.start(0); seqK.start(0);
-      // Le fichier vinyle se charge en arrière-plan : on le lance dès qu'il est prêt.
-      if (vinyl.loaded) { try { vinyl.start(0); } catch (e) { } }
-      else vinyl.autostart = true;
-      Tone.Transport.start();
-    },
-    musicStop: () => {
-      Tone.Transport.stop(); seqD.stop(); seqH.stop(); seqB.stop(); seqC.stop(); seqK.stop();
-      vinyl.autostart = false;
-      if (vinyl.loaded) { try { vinyl.stop(); } catch (e) { } }
-    },
+    musicStart: () => { music.currentTime = 0; music.play().catch(() => { }); },
+    musicStop: () => { music.pause(); },
   };
 }

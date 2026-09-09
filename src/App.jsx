@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import * as Tone from "tone";
 import {
   newGame, dealRound, applyExchanges, legalMoves, applyMove,
   botMove, SUITS, RANK_LABEL,
@@ -7,12 +6,11 @@ import {
 import { trackEvent } from "./analytics.js";
 import {
   C, MARKER, SANS, PLAYERS_META, nameOf, SEATS, TURN_TIME,
-  Sticker, Card, Tag, HierarchyStrip, Btn, Shell, createAudio,
+  Sticker, Card, Tag, HierarchyStrip, Btn, Shell,
 } from "./ui/shared.jsx";
 
-export default function Trouduc() {
+export default function Trouduc({ sfx, musicOn, sfxOn, toggleMusic, toggleSfx }) {
   const gRef = useRef(null);
-  const audioRef = useRef(null);
   const [, setTick] = useState(0);
   const [screen, setScreen] = useState("menu");
   const [selected, setSelected] = useState([]);
@@ -24,29 +22,11 @@ export default function Trouduc() {
   const [fly, setFly] = useState(null);
   const [timeLeft, setTimeLeft] = useState(TURN_TIME);
   const [note, setNote] = useState("");
-  const [soundOn, setSoundOn] = useState(true);
   const seenWinSeq = useRef(0);
   const ceremonyPlayed = useRef(0);
   const gameFinishTracked = useRef(false);
   const rerender = useCallback(() => setTick(t => t + 1), []);
   const g = gRef.current;
-
-  const sfx = name => { if (soundOn && audioRef.current) try { audioRef.current[name](); } catch (e) { } };
-  const ensureAudio = async () => {
-    if (audioRef.current) return;
-    try {
-      await Tone.start();
-      audioRef.current = createAudio();
-      if (soundOn) audioRef.current.musicStart();
-    } catch (e) { }
-  };
-  const toggleSound = () => {
-    setSoundOn(on => {
-      const next = !on;
-      if (audioRef.current) (next ? audioRef.current.musicStart() : audioRef.current.musicStop());
-      return next;
-    });
-  };
 
   const humanExchangeRole = () => {
     if (!g || !g.lastTitles) return null;
@@ -66,7 +46,6 @@ export default function Trouduc() {
   };
 
   const startGame = async () => {
-    await ensureAudio();
     gRef.current = newGame(numPlayers, numRounds);
     dealRound(gRef.current);
     seenWinSeq.current = 0;
@@ -223,7 +202,7 @@ export default function Trouduc() {
 
   /* ---- MENU ---- */
   if (screen === "menu") return (
-    <Shell soundOn={soundOn} onToggleSound={toggleSound}>
+    <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
     <div style={{ maxWidth: 430, width: "100%", textAlign: "center", marginTop: 30 }}>
       <div style={{ fontFamily: MARKER, fontSize: 52, color: C.fluo, transform: "rotate(-3deg)", lineHeight: 1, textShadow: `3px 3px 0 ${C.ink}` }}>
         TROUDUC
@@ -295,7 +274,7 @@ export default function Trouduc() {
     const role = humanExchangeRole();
     const need = role === "P" ? 2 : 1;
     return (
-      <Shell soundOn={soundOn} onToggleSound={toggleSound}>
+      <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
       <div style={{ maxWidth: 460, width: "100%", textAlign: "center", marginTop: 24 }}>
         <div style={{ display: "flex", justifyContent: "center" }}><Sticker p={0} size={54} /></div>
         <div style={{ fontFamily: MARKER, fontSize: 24, color: C.fluo, transform: "rotate(-2deg)", margin: "10px 0 4px" }}>
@@ -322,7 +301,7 @@ export default function Trouduc() {
     const order = Array.from({ length: g.n }, (_, p) => p).sort((a, b) => g.titles[a] - g.titles[b]);
     const label = (t) => t === 0 ? "LE BOSS" : t === 1 ? "VICE-BOSS" : t === g.n - 1 ? "TROUDUC" : t === g.n - 2 ? "VICE-TROUDUC" : "DANS LE VENT";
     return (
-      <Shell soundOn={soundOn} onToggleSound={toggleSound}>
+      <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
       <div style={{ maxWidth: 450, width: "100%", textAlign: "center", marginTop: 22 }}>
         <div style={{ fontFamily: MARKER, fontSize: 15, color: C.dim }}>manche {g.round}/{g.numRounds}</div>
         <div style={{ height: 16 }} />
@@ -374,14 +353,14 @@ export default function Trouduc() {
   }
 
   if (screen === "standings") {
-    return <Standings g={g} onNext={g.phase === "PARTIE_FINIE" ? () => setScreen("menu") : nextRound} soundOn={soundOn} onToggleSound={toggleSound} />;
+    return <Standings g={g} onNext={g.phase === "PARTIE_FINIE" ? () => setScreen("menu") : nextRound} musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx} />;
   }
 
   /* ---- TABLE DE JEU ---- */
   const lastPlay = g.trick ? g.trick.pile[g.trick.pile.length - 1] : null;
   const playableRanks = new Set(humanPlays.map(m => m.rank));
   return (
-    <Shell soundOn={soundOn} onToggleSound={toggleSound}>
+    <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
     <div style={{ maxWidth: 500, width: "100%", display: "flex", flexDirection: "column", flex: 1 }}>
       {revShow && (
         <div style={{
@@ -522,7 +501,7 @@ export default function Trouduc() {
 }
 
 /* Le mur des scores : stickers claqués sur le béton, lignes animées */
-function Standings({ g, onNext, soundOn, onToggleSound }) {
+function Standings({ g, onNext, musicOn, sfxOn, onToggleMusic, onToggleSfx }) {
   const [moved, setMoved] = useState(false);
   useEffect(() => { const t = setTimeout(() => setMoved(true), 500); return () => clearTimeout(t); }, []);
   const players = Array.from({ length: g.n }, (_, p) => p);
@@ -532,7 +511,7 @@ function Standings({ g, onNext, soundOn, onToggleSound }) {
   const rowH = 60;
   const finished = g.phase === "PARTIE_FINIE";
   return (
-    <Shell soundOn={soundOn} onToggleSound={onToggleSound}>
+    <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={onToggleMusic} onToggleSfx={onToggleSfx}>
     <div style={{ maxWidth: 440, width: "100%", textAlign: "center", marginTop: 24 }}>
       <div style={{ fontFamily: "'Permanent Marker',cursive", fontSize: 26, color: "#ECEFF1", transform: "rotate(-2deg)", textShadow: "3px 3px 0 #1A1A1E" }}>
         {finished ? "LE MUR FINAL" : "LE MUR DES SCORES"} <span style={{ color: "#FF3D8A" }}>↓</span>

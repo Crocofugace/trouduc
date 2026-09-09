@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import * as Tone from "tone";
 import { legalMoves } from "../engine/president.js";
 import {
   C, MARKER, SANS, nameOf, SEATS, TURN_TIME,
-  Sticker, Card, Tag, HierarchyStrip, Btn, Shell, createAudio,
+  Sticker, Card, Tag, HierarchyStrip, Btn, Shell,
 } from "../ui/shared.jsx";
 
 // Reconstruit un état moteur minimal pour calculer nos propres coups légaux côté client
@@ -19,10 +18,8 @@ function fakeG(state, mySeat) {
   };
 }
 
-export default function OnlineGame({ state, socket, code, playerId, onExitToMenu }) {
+export default function OnlineGame({ state, socket, code, playerId, onExitToMenu, sfx, musicOn, sfxOn, toggleMusic, toggleSfx }) {
   const mySeat = state.me;
-  const audioRef = useRef(null);
-  const [soundOn, setSoundOn] = useState(true);
   const [selected, setSelected] = useState([]);
   const [announce, setAnnounce] = useState(null);
   const [revShow, setRevShow] = useState(false);
@@ -33,12 +30,6 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
   const prevRef = useRef({ revolution: state.revolution, winSeq: state.winSeq });
   const ceremonyRound = useRef(0);
   const autoPassedMoveSeq = useRef(-1);
-
-  const sfx = name => { if (soundOn && audioRef.current) try { audioRef.current[name](); } catch (e) { } };
-  const ensureAudio = async () => {
-    if (audioRef.current) return;
-    try { await Tone.start(); audioRef.current = createAudio(); } catch (e) { }
-  };
 
   // Réinitialise la sélection de cartes quand la main change vraiment (nouveau tour, nouvelle manche).
   useEffect(() => { setSelected([]); }, [state.round, state.phase]);
@@ -109,7 +100,6 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
     (!state.mustIncludeThreeClubs || selCards.some(c => c.rank === 3 && c.suit === 0));
 
   const toggleCard = id => {
-    ensureAudio();
     sfx("select");
     const card = state.myHand.find(c => c.id === id);
     setSelected(sel => {
@@ -126,14 +116,14 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
 
   const playSelection = () => {
     if (!canPlay) return;
-    ensureAudio(); sfx("card");
+    sfx("card");
     socket.emit("playCards", { code, playerId, cardIds: selected }, (res) => {
       if (res && res.error) setNote(res.error); else setSelected([]);
     });
   };
   const pass = () => {
     if (!canPass) return;
-    ensureAudio(); sfx("pass");
+    sfx("pass");
     socket.emit("pass", { code, playerId }, (res) => {
       if (res && res.error) setNote(res.error); else setSelected([]);
     });
@@ -141,7 +131,6 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
   const confirmExchange = () => {
     const need = state.exchangeRole === "P" ? 2 : 1;
     if (selected.length !== need) return;
-    ensureAudio();
     socket.emit("exchangeChoice", { code, playerId, cardIds: selected }, (res) => {
       if (res && res.error) setNote(res.error); else setSelected([]);
     });
@@ -151,7 +140,7 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
   if (state.phase === "ECHANGES") {
     if (!state.exchangeRole) {
       return (
-        <Shell soundOn={soundOn} onToggleSound={() => setSoundOn(o => !o)}>
+        <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
           <div style={{ maxWidth: 420, width: "100%", textAlign: "center", marginTop: 60 }}>
             <div style={{ fontFamily: MARKER, fontSize: 22, color: C.fluo }}>Échange de cartes</div>
             <p style={{ color: C.dim, fontSize: 14, fontWeight: 600 }}>Les échanges entre Boss/Trouduc et Vice-Boss/Vice-Trouduc sont en cours...</p>
@@ -161,7 +150,7 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
     }
     const need = state.exchangeRole === "P" ? 2 : 1;
     return (
-      <Shell soundOn={soundOn} onToggleSound={() => setSoundOn(o => !o)}>
+      <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
         <div style={{ maxWidth: 460, width: "100%", textAlign: "center", marginTop: 24 }}>
           <div style={{ display: "flex", justifyContent: "center" }}><Sticker p={mySeat % 6} size={54} /></div>
           <div style={{ fontFamily: MARKER, fontSize: 24, color: C.fluo, transform: "rotate(-2deg)", margin: "10px 0 4px" }}>
@@ -189,7 +178,7 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
     const order = Array.from({ length: state.n }, (_, p) => p).sort((a, b) => state.titles[a] - state.titles[b]);
     const label = (t) => t === 0 ? "LE BOSS" : t === 1 ? "VICE-BOSS" : t === state.n - 1 ? "TROUDUC" : t === state.n - 2 ? "VICE-TROUDUC" : "DANS LE VENT";
     return (
-      <Shell soundOn={soundOn} onToggleSound={() => setSoundOn(o => !o)}>
+      <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
         <div style={{ maxWidth: 450, width: "100%", textAlign: "center", marginTop: 22 }}>
           <div style={{ fontFamily: MARKER, fontSize: 15, color: C.dim }}>manche {state.round}/{state.numRounds}</div>
           <div style={{ height: 16 }} />
@@ -235,7 +224,7 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
     const byScore = scores => players.slice().sort((a, b) => scores[b] - scores[a] || state.titles[a] - state.titles[b]);
     const order = byScore(state.scores);
     return (
-      <Shell soundOn={soundOn} onToggleSound={() => setSoundOn(o => !o)}>
+      <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
         <div style={{ maxWidth: 440, width: "100%", textAlign: "center", marginTop: 24 }}>
           <div style={{ fontFamily: "'Permanent Marker',cursive", fontSize: 26, color: "#ECEFF1", transform: "rotate(-2deg)", textShadow: "3px 3px 0 #1A1A1E" }}>
             {finished ? "LE MUR FINAL" : "LE MUR DES SCORES"} <span style={{ color: "#FF3D8A" }}>↓</span>
@@ -270,7 +259,7 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
   const lastPlay = state.trick ? state.trick.pile[state.trick.pile.length - 1] : null;
   const playableRanks = new Set(humanPlays.map(m => m.rank));
   return (
-    <Shell soundOn={soundOn} onToggleSound={() => setSoundOn(o => !o)}>
+    <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
       <div style={{ maxWidth: 500, width: "100%", display: "flex", flexDirection: "column", flex: 1 }}>
         {revShow && (
           <div style={{

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { C, MARKER, Shell, Btn, Sticker } from "../ui/shared.jsx";
 
-export default function OnlineLobby({ lobby, onStart, onLeave }) {
+export default function OnlineLobby({ lobby, onStart, onLeave, musicOn, sfxOn, toggleMusic, toggleSfx }) {
   const [, setTick] = useState(0);
   useEffect(() => {
     if (!lobby.autoStartDeadline) return;
@@ -16,7 +16,7 @@ export default function OnlineLobby({ lobby, onStart, onLeave }) {
   const remaining = lobby.autoStartDeadline ? Math.max(0, Math.ceil((lobby.autoStartDeadline - Date.now()) / 1000)) : null;
 
   return (
-    <Shell>
+    <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
       <div style={{ maxWidth: 420, width: "100%", textAlign: "center", marginTop: 40 }}>
         <div style={{ fontFamily: MARKER, fontSize: 26, color: C.fluo, transform: "rotate(-2deg)" }}>
           {isPublic ? "Partie publique — en attente" : "Salle d'attente"}

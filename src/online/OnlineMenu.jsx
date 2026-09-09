@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { C, MARKER, Shell, Btn } from "../ui/shared.jsx";
 
-export default function OnlineMenu({ name, onChangeName, onQuickPlay, onCreate, onJoin, error }) {
+export default function OnlineMenu({ name, onChangeName, onQuickPlay, onCreate, onJoin, error, musicOn, sfxOn, toggleMusic, toggleSfx }) {
   const [sub, setSub] = useState("main"); // main | create | join
   const [numPlayers, setNumPlayers] = useState(4);
   const [numRounds, setNumRounds] = useState(5);
@@ -30,7 +30,7 @@ export default function OnlineMenu({ name, onChangeName, onQuickPlay, onCreate, 
 
   if (sub === "create") {
     return (
-      <Shell>
+      <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
         <div style={{ maxWidth: 420, width: "100%", textAlign: "center", marginTop: 40 }}>
           <div style={{ fontFamily: MARKER, fontSize: 28, color: C.fluo, transform: "rotate(-2deg)" }}>Créer une partie</div>
           {field("joueurs à table", choiceRow([4, 5, 6], numPlayers, setNumPlayers))}
@@ -47,7 +47,7 @@ export default function OnlineMenu({ name, onChangeName, onQuickPlay, onCreate, 
 
   if (sub === "join") {
     return (
-      <Shell>
+      <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
         <div style={{ maxWidth: 420, width: "100%", textAlign: "center", marginTop: 40 }}>
           <div style={{ fontFamily: MARKER, fontSize: 28, color: C.fluo, transform: "rotate(-2deg)" }}>Rejoindre par code</div>
           {field("code à 4 lettres", (
@@ -74,7 +74,7 @@ export default function OnlineMenu({ name, onChangeName, onQuickPlay, onCreate, 
   }
 
   return (
-    <Shell>
+    <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
       <div style={{ maxWidth: 420, width: "100%", textAlign: "center", marginTop: 40 }}>
         <div style={{ fontFamily: MARKER, fontSize: 40, color: C.fluo, transform: "rotate(-3deg)", textShadow: `3px 3px 0 ${C.ink}` }}>
           JOUER EN LIGNE

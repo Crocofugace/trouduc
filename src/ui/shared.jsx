@@ -99,7 +99,7 @@ export function Btn({ label, onClick, disabled, big, alt, rot = 0 }) {
   );
 }
 
-export function Shell({ soundOn, onToggleSound, children }) {
+export function Shell({ musicOn, sfxOn, onToggleMusic, onToggleSfx, children }) {
   return (
     <div style={{
       minHeight: "100vh", position: "relative", background: C.wall,
@@ -114,12 +114,20 @@ export function Shell({ soundOn, onToggleSound, children }) {
         @keyframes shake { 0%,100%{ transform:translate(-50%,-50%);} 25%{ transform:translate(calc(-50% - 3px),-50%);} 75%{ transform:translate(calc(-50% + 3px),-50%);} }
         @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
       `}</style>
-      {onToggleSound && (
-        <button onClick={onToggleSound} title="Musique et sons" style={{
+      {onToggleMusic && (
+        <button onClick={onToggleMusic} title={musicOn ? "Couper la musique" : "Remettre la musique"} style={{
+          position: "absolute", top: 10, right: 56, zIndex: 40, width: 40, height: 40, borderRadius: 8,
+          border: "2px solid #fff", outline: `2px solid ${C.ink}`, background: musicOn ? C.panel : "#232328",
+          color: musicOn ? C.off : "rgba(236,239,241,.35)",
+          fontSize: 16, cursor: "pointer", transform: "rotate(-3deg)", boxShadow: "2px 2px 0 rgba(0,0,0,.6)",
+        }}>🎵</button>
+      )}
+      {onToggleSfx && (
+        <button onClick={onToggleSfx} title={sfxOn ? "Couper les bruitages" : "Remettre les bruitages"} style={{
           position: "absolute", top: 10, right: 10, zIndex: 40, width: 40, height: 40, borderRadius: 8,
           border: "2px solid #fff", outline: `2px solid ${C.ink}`, background: C.panel, color: C.off,
           fontSize: 16, cursor: "pointer", transform: "rotate(3deg)", boxShadow: "2px 2px 0 rgba(0,0,0,.6)",
-        }}>{soundOn ? "🔊" : "🔇"}</button>
+        }}>{sfxOn ? "🔊" : "🔇"}</button>
       )}
       {children}
     </div>

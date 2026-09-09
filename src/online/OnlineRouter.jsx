@@ -9,7 +9,7 @@ const NAME_KEY = "trouducOnlineName";
 const CODE_KEY = "trouducOnlineCode";
 const PLAYER_KEY = "trouducOnlinePlayerId";
 
-export default function OnlineRouter({ onExit }) {
+export default function OnlineRouter({ onExit, sfx, musicOn, sfxOn, toggleMusic, toggleSfx }) {
   const socketRef = useRef(null);
   const [name, setName] = useState(() => localStorage.getItem(NAME_KEY) || "");
   const [nameInput, setNameInput] = useState("");
@@ -102,7 +102,7 @@ export default function OnlineRouter({ onExit }) {
 
   if (screen === "name") {
     return (
-      <Shell>
+      <Shell musicOn={musicOn} sfxOn={sfxOn} onToggleMusic={toggleMusic} onToggleSfx={toggleSfx}>
         <div style={{ maxWidth: 380, width: "100%", textAlign: "center", marginTop: 60 }}>
           <div style={{ fontFamily: MARKER, fontSize: 30, color: C.fluo, transform: "rotate(-2deg)", marginBottom: 20 }}>Comment tu t'appelles ?</div>
           <input value={nameInput} maxLength={20} autoFocus placeholder="Ton pseudo"
@@ -121,13 +121,15 @@ export default function OnlineRouter({ onExit }) {
   }
 
   if (screen === "lobby" && lobby) {
-    return <OnlineLobby lobby={lobby} onStart={startGame} onLeave={leave} />;
+    return <OnlineLobby lobby={lobby} onStart={startGame} onLeave={leave}
+      musicOn={musicOn} sfxOn={sfxOn} toggleMusic={toggleMusic} toggleSfx={toggleSfx} />;
   }
 
   if (screen === "game" && gameState) {
     const code = sessionStorage.getItem(CODE_KEY);
     const playerId = sessionStorage.getItem(PLAYER_KEY);
-    return <OnlineGame state={gameState} socket={socketRef.current} code={code} playerId={playerId} onExitToMenu={exitToMenu} />;
+    return <OnlineGame state={gameState} socket={socketRef.current} code={code} playerId={playerId} onExitToMenu={exitToMenu}
+      sfx={sfx} musicOn={musicOn} sfxOn={sfxOn} toggleMusic={toggleMusic} toggleSfx={toggleSfx} />;
   }
 
   return (
@@ -139,6 +141,7 @@ export default function OnlineRouter({ onExit }) {
         onCreate={createRoom}
         onJoin={joinRoom}
         error={error}
+        musicOn={musicOn} sfxOn={sfxOn} toggleMusic={toggleMusic} toggleSfx={toggleSfx}
       />
       {toast && (
         <div style={{

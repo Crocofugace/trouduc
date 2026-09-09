@@ -143,6 +143,10 @@ export function createAudio() {
   music.loop = true;
   music.volume = 0.55;
   music.preload = "auto";
+  // Cri de victoire (échantillon réel) joué pour le premier à finir sa main (le Boss/Président).
+  const victory = new Audio("/audio/victory.mp3");
+  victory.volume = 0.8;
+  victory.preload = "auto";
 
   const spray = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.06, sustain: 0 } })
     .connect(new Tone.Volume(-14).connect(master));
@@ -154,8 +158,6 @@ export function createAudio() {
     .connect(new Tone.Volume(-9).connect(master));
   const click = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 } })
     .connect(new Tone.Volume(-24).connect(master));
-  const horn = new Tone.Synth({ oscillator: { type: "sawtooth" }, portamento: 0.06, envelope: { attack: 0.02, decay: 0.05, sustain: 0.85, release: 0.15 } })
-    .connect(new Tone.Volume(-13).connect(master));
   const stab = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sawtooth" }, envelope: { attack: 0.03, decay: 0.2, sustain: 0.4, release: 0.3 } })
     .connect(new Tone.Volume(-14).connect(master));
   const sad = new Tone.Synth({ oscillator: { type: "sawtooth" }, portamento: 0.22, envelope: { attack: 0.05, decay: 0.1, sustain: 0.7, release: 0.4 } })
@@ -175,13 +177,7 @@ export function createAudio() {
       spraySlow.triggerAttackRelease("2n", now);
       stab.triggerAttackRelease(["D3", "G#3", "D4"], "4n", now + 0.15);
     },
-    fanfare: () => { // air horn du boss
-      const now = Tone.now();
-      horn.triggerAttackRelease("C4", "8n", now);
-      horn.triggerAttackRelease("G4", "8n", now + 0.28);
-      horn.triggerAttackRelease("C4", "16n", now + 0.56);
-      horn.triggerAttackRelease("G4", "2n", now + 0.68);
-    },
+    fanfare: () => { victory.currentTime = 0; victory.play().catch(() => { }); }, // cri de victoire du boss
     wahwah: () => { // scratch d'arrêt façon platine + motif descendant désolé
       const now = Tone.now();
       scratchFilter.frequency.setValueAtTime(2200, now);

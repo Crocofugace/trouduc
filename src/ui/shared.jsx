@@ -99,21 +99,55 @@ export function Btn({ label, onClick, disabled, big, alt, rot = 0 }) {
   );
 }
 
+// Mur de briques blanchies avec relief (ombre/lumière par brique, fissures, auréoles d'humidité).
+const BRICK_TILE_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="140">
+  <rect width="240" height="140" fill="#8f887a"/>
+  ${[0, 1, 2, 3].map(row => {
+    const y = row * 35;
+    const offset = row % 2 ? 60 : 0;
+    const bricks = [];
+    for (let x = -60; x < 300; x += 120) {
+      const bx = x + offset;
+      bricks.push(`
+        <rect x="${bx}" y="${y}" width="114" height="29" fill="#c7c0b2"/>
+        <rect x="${bx}" y="${y}" width="114" height="6" fill="#ffffff" opacity="0.16"/>
+        <rect x="${bx}" y="${y + 23}" width="114" height="6" fill="#000000" opacity="0.14"/>
+        <rect x="${bx}" y="${y}" width="5" height="29" fill="#000000" opacity="0.08"/>
+      `);
+    }
+    return bricks.join("");
+  }).join("")}
+  <ellipse cx="40" cy="30" rx="55" ry="26" fill="#000" opacity="0.05"/>
+  <ellipse cx="190" cy="95" rx="60" ry="30" fill="#000" opacity="0.05"/>
+  <ellipse cx="120" cy="60" rx="40" ry="70" fill="#5a5448" opacity="0.06"/>
+  <path d="M55 0 L60 35 L48 70" stroke="#000" stroke-width="1.2" opacity="0.1" fill="none"/>
+  <path d="M175 40 L182 75 L170 110" stroke="#000" stroke-width="1.2" opacity="0.08" fill="none"/>
+</svg>`.trim();
+
 export function Shell({ musicOn, sfxOn, onToggleMusic, onToggleSfx, children }) {
   return (
     <div style={{
-      minHeight: "100vh", position: "relative", background: C.wall,
-      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='96'%3E%3Cpath d='M0 1h160M0 49h160M0 95h160' stroke='%23ffffff10' stroke-width='2'/%3E%3Cpath d='M0 0v48M80 0v48M160 0v48M40 48v48M120 48v48' stroke='%23ffffff0d' stroke-width='2'/%3E%3C/svg%3E")`,
+      minHeight: "100vh", position: "relative", background: "#8f887a",
+      backgroundImage: `linear-gradient(rgba(18,17,20,.28), rgba(18,17,20,.4)), url("data:image/svg+xml,${encodeURIComponent(BRICK_TILE_SVG)}")`,
+      backgroundSize: "auto, 240px 140px",
       color: C.off, fontFamily: SANS,
       display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 8px 24px",
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Archivo:wght@500;600;700&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Archivo:wght@500;600;700&family=Butcherman&display=swap" rel="stylesheet" />
       <style>{`
         @keyframes pulseFluo { 0%,100%{ box-shadow:0 0 0 0 rgba(204,255,0,.6);} 50%{ box-shadow:0 0 0 8px rgba(204,255,0,0);} }
         @keyframes slapIn { 0%{ transform:scale(2.2) rotate(-14deg); opacity:0;} 65%{ transform:scale(.94) rotate(-5deg); opacity:1;} 100%{ transform:scale(1) rotate(-6deg);} }
         @keyframes shake { 0%,100%{ transform:translate(-50%,-50%);} 25%{ transform:translate(calc(-50% - 3px),-50%);} 75%{ transform:translate(calc(-50% + 3px),-50%);} }
         @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
       `}</style>
+      <div aria-hidden="true" style={{
+        position: "fixed", right: "1%", bottom: "9%", zIndex: 5, pointerEvents: "none",
+        fontFamily: "'Butcherman', cursive", fontSize: "min(11vw, 108px)", lineHeight: 1,
+        color: "#171512", opacity: 0.58, transform: "rotate(-6deg)",
+        filter: "drop-shadow(4px 10px 5px rgba(0,0,0,.3))",
+        userSelect: "none",
+      }}>TROUDUC</div>
       {onToggleMusic && (
         <button onClick={onToggleMusic} title={musicOn ? "Couper la musique" : "Remettre la musique"} style={{
           position: "absolute", top: 10, right: 56, zIndex: 40, width: 40, height: 40, borderRadius: 8,

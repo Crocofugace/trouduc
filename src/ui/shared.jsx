@@ -147,6 +147,10 @@ export function createAudio() {
   const victory = new Audio("/audio/victory.mp3");
   victory.volume = 0.8;
   victory.preload = "auto";
+  // Cri de défaite (échantillon réel) joué pour le Trou du Cul, uniquement à la toute fin de la partie.
+  const loss = new Audio("/audio/loss.mp3");
+  loss.volume = 0.8;
+  loss.preload = "auto";
 
   const spray = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.06, sustain: 0 } })
     .connect(new Tone.Volume(-14).connect(master));
@@ -160,12 +164,6 @@ export function createAudio() {
     .connect(new Tone.Volume(-24).connect(master));
   const stab = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sawtooth" }, envelope: { attack: 0.03, decay: 0.2, sustain: 0.4, release: 0.3 } })
     .connect(new Tone.Volume(-14).connect(master));
-  const sad = new Tone.Synth({ oscillator: { type: "sawtooth" }, portamento: 0.22, envelope: { attack: 0.05, decay: 0.1, sustain: 0.7, release: 0.4 } })
-    .connect(new Tone.Volume(-12).connect(master));
-  // Coup de scratch vinyle (bruit filtré + pitch-bend descendant) déclenché juste avant le "wahwah" du Trou du Cul.
-  const scratchNoise = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.18, sustain: 0 } });
-  const scratchFilter = new Tone.Filter(1200, "bandpass").connect(new Tone.Volume(-16).connect(master));
-  scratchNoise.connect(scratchFilter);
 
   return {
     card: () => spray.triggerAttackRelease("16n"),
@@ -178,14 +176,7 @@ export function createAudio() {
       stab.triggerAttackRelease(["D3", "G#3", "D4"], "4n", now + 0.15);
     },
     fanfare: () => { victory.currentTime = 0; victory.play().catch(() => { }); }, // cri de victoire du boss
-    wahwah: () => { // scratch d'arrêt façon platine + motif descendant désolé
-      const now = Tone.now();
-      scratchFilter.frequency.setValueAtTime(2200, now);
-      scratchFilter.frequency.exponentialRampToValueAtTime(300, now + 0.18);
-      scratchNoise.triggerAttackRelease("8n", now);
-      ["A3", "G3", "F#3"].forEach((n, i) => sad.triggerAttackRelease(n, "4n", now + 0.25 + i * 0.35));
-      sad.triggerAttackRelease("C3", "2n", now + 1.3);
-    },
+    wahwah: () => { loss.currentTime = 0; loss.play().catch(() => { }); }, // cri de défaite du Trou du Cul
     musicStart: () => { music.currentTime = 0; music.play().catch(() => { }); },
     musicStop: () => { music.pause(); },
   };

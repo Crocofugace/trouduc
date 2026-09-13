@@ -25,6 +25,7 @@ export default function Trouduc({ sfx, musicOn, sfxOn, toggleMusic, toggleSfx })
   const seenWinSeq = useRef(0);
   const ceremonyPlayed = useRef(0);
   const gameFinishTracked = useRef(false);
+  const firstFinisherRound = useRef(0);
   const rerender = useCallback(() => setTick(t => t + 1), []);
   const g = gRef.current;
 
@@ -51,6 +52,7 @@ export default function Trouduc({ sfx, musicOn, sfxOn, toggleMusic, toggleSfx })
     seenWinSeq.current = 0;
     ceremonyPlayed.current = 0;
     gameFinishTracked.current = false;
+    firstFinisherRound.current = 0;
     setSelected([]); setNote(""); setAnnounce(null); setFly(null); setRevShow(false);
     setScreen("play");
     trackEvent("game_started", { players: numPlayers, rounds: numRounds, bots: botLevel });
@@ -78,6 +80,11 @@ export default function Trouduc({ sfx, musicOn, sfxOn, toggleMusic, toggleSfx })
   };
 
   const afterMove = revBefore => {
+    // Cri de victoire : uniquement pour toi, uniquement au moment précis où tu es le premier sorti de la manche.
+    if (g.finishOrder.length >= 1 && firstFinisherRound.current !== g.round) {
+      firstFinisherRound.current = g.round;
+      if (g.finishOrder[0] === 0) sfx("fanfare");
+    }
     if (g.revolution !== revBefore) {
       sfx("revolution");
       setRevShow(true);
@@ -119,13 +126,12 @@ export default function Trouduc({ sfx, musicOn, sfxOn, toggleMusic, toggleSfx })
     if (screen !== "roundEnd" || !g || !g.titles) return;
     if (ceremonyPlayed.current === g.round) return;
     ceremonyPlayed.current = g.round;
-    sfx("fanfare");
-    const t = setTimeout(() => sfx("wahwah"), 1300);
+    // Cri de défaite : uniquement pour toi, uniquement à la toute fin de la partie (pas à chaque manche).
+    if (g.phase === "PARTIE_FINIE" && g.titles[0] === g.n - 1) sfx("wahwah");
     if (g.phase === "PARTIE_FINIE" && !gameFinishTracked.current) {
       gameFinishTracked.current = true;
       trackEvent("game_finished", { players: g.n, rounds: g.numRounds, bots: botLevel });
     }
-    return () => clearTimeout(t);
   }, [screen]); // eslint-disable-line
 
   const humanLegal = g && screen === "play" && g.turn === 0 && !announce && !revShow ? legalMoves(g, 0) : [];

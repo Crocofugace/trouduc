@@ -29,6 +29,8 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
   const [view, setView] = useState("play"); // play | roundEnd | standings
   const prevRef = useRef({ revolution: state.revolution, winSeq: state.winSeq });
   const ceremonyRound = useRef(0);
+  const firstFinisherRound = useRef(0);
+  const gameEndHandled = useRef(false);
   const autoPassedMoveSeq = useRef(-1);
 
   // Réinitialise la sélection de cartes quand la main change vraiment (nouveau tour, nouvelle manche).
@@ -53,15 +55,30 @@ export default function OnlineGame({ state, socket, code, playerId, onExitToMenu
     prevRef.current = { revolution: state.revolution, winSeq: state.winSeq };
   }, [state.revolution, state.winSeq]); // eslint-disable-line
 
+  // Cri de victoire : uniquement pour toi, uniquement au moment précis où tu es le premier sorti de la manche
+  // (pas à l'écran de fin de manche — audible seulement par le gagnant, jamais par les autres joueurs).
+  useEffect(() => {
+    if (!state.finishOrder || state.finishOrder.length === 0) return;
+    if (firstFinisherRound.current === state.round) return;
+    firstFinisherRound.current = state.round;
+    if (state.finishOrder[0] === mySeat) sfx("fanfare");
+  }, [state.finishOrder, state.round]); // eslint-disable-line
+
+  // Cri de défaite : uniquement pour toi, uniquement à la toute fin de la partie (pas à chaque manche,
+  // pas sur le tableau des scores intermédiaire) — audible seulement par le Trou du Cul de la manche finale.
+  useEffect(() => {
+    if (state.phase !== "PARTIE_FINIE" || gameEndHandled.current) return;
+    gameEndHandled.current = true;
+    if (state.titles && state.titles[mySeat] === state.n - 1) sfx("wahwah");
+  }, [state.phase]); // eslint-disable-line
+
   useEffect(() => {
     if (state.phase !== "MANCHE_FINIE" && state.phase !== "PARTIE_FINIE") { setView("play"); return; }
     setView("roundEnd");
     if (ceremonyRound.current === state.round) return;
     ceremonyRound.current = state.round;
-    sfx("fanfare");
-    const t = setTimeout(() => sfx("wahwah"), 1300);
     const t2 = setTimeout(() => setView(v => (v === "roundEnd" ? "standings" : v)), 2600);
-    return () => { clearTimeout(t); clearTimeout(t2); };
+    return () => clearTimeout(t2);
   }, [state.phase, state.round]); // eslint-disable-line
 
   useEffect(() => {

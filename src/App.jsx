@@ -126,8 +126,8 @@ export default function Trouduc({ sfx, musicOn, sfxOn, toggleMusic, toggleSfx })
     if (screen !== "roundEnd" || !g || !g.titles) return;
     if (ceremonyPlayed.current === g.round) return;
     ceremonyPlayed.current = g.round;
-    // Cri de défaite : uniquement pour toi, uniquement à la toute fin de la partie (pas à chaque manche).
-    if (g.phase === "PARTIE_FINIE" && g.titles[0] === g.n - 1) sfx("wahwah");
+    // Cri de défaite : uniquement pour toi, à la fin de chaque manche où tu es Trou du Cul.
+    if (g.titles[0] === g.n - 1) sfx("wahwah");
     if (g.phase === "PARTIE_FINIE" && !gameFinishTracked.current) {
       gameFinishTracked.current = true;
       trackEvent("game_finished", { players: g.n, rounds: g.numRounds, bots: botLevel });
